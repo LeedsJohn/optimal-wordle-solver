@@ -1,11 +1,19 @@
 open! Core
 
-type t = { words : string list; answers : string list }
+type t = { words : string list; answers : string list } [@@deriving sexp]
 
-let create guesses answers ?num_guesses ?num_answers () =
+let create guesses answers ?num_guesses ?num_answers ?(shuffle = false) () =
   let crop l n = match n with None -> l | Some n -> List.take l n in
-  let guesses = crop (In_channel.read_lines guesses) num_guesses in
-  let answers = crop (In_channel.read_lines answers) num_answers in
+  let guesses = In_channel.read_lines guesses in
+  let answers = In_channel.read_lines answers in
+  let guesses, answers =
+    if shuffle then
+      let random_state = Random.State.make [| 0 |] in
+      (List.permute ~random_state guesses, List.permute ~random_state answers)
+    else (guesses, answers)
+  in
+  let guesses, answers = (crop guesses num_guesses, crop answers num_answers) in
+
   print_s [%sexp (guesses : string list)];
   print_s [%sexp (answers : string list)];
   { words = guesses @ answers; answers }

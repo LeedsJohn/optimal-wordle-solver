@@ -42,6 +42,12 @@ module Greens = struct
     if n = 0 then None else Some (char_of_int (n - 1))
 
   let bit_or = M.bit_or
+
+  let count_occurrences t c =
+    List.fold (List.range 0 5) ~init:0 ~f:(fun acc i ->
+        match get t i with
+        | None -> acc
+        | Some c2 -> acc + Bool.to_int Char.(c = c2))
 end
 
 module Min_counts = struct
@@ -123,11 +129,12 @@ let can_word_be_answer t word =
         not (Bad_characters.get t.bad_characters i c))
   in
   let count_check () =
-    String.for_all word ~f:(fun c ->
+    List.for_all (List.range 0 26) ~f:(fun i ->
+        let c = char_of_int i in
         let count = String.count word ~f:(Char.equal c) in
         let min_count = Min_counts.get t.min_counts c in
         let capped = Found_max.get t.found_max c in
-        if capped then count = min_count else count >= min_count)
+        (capped && count = min_count) || ((not capped) && count >= min_count))
   in
   bad_character_check () && green_check () && count_check ()
 
@@ -225,6 +232,16 @@ let add_information t ~guess ~answer =
         Min_counts.set acc c max_val)
   in
   let found_max = Found_max.bit_or t.found_max new_info.found_max in
+  let found_max =
+    List.fold (List.range 0 26) ~init:found_max ~f:(fun acc i ->
+        let c = char_of_int i in
+        if
+          List.for_all (List.range 0 5) ~f:(fun i ->
+              Option.is_some (Greens.get greens i)
+              || Bad_characters.get bad_characters i c)
+        then Found_max.set acc c
+        else acc)
+  in
   filter_bad_characters { greens; min_counts; found_max; bad_characters }
 
 let all_greens t =
@@ -232,31 +249,47 @@ let all_greens t =
       Option.is_some (Greens.get t.greens i))
 
 let is_guess_useless t guess =
-  let spot_is_green i = Option.is_some (Greens.get t.greens i) in
-  let bad_character i c =
-    let already_guessed = Bad_characters.get t.bad_characters i c in
-    let no_unknown_spots =
-      let count = Min_counts.get t.min_counts c in
-      let num_found_spots =
-        List.fold (List.range 0 5) ~init:0 ~f:(fun acc i ->
-            match Greens.get t.greens i with
-            | None -> acc
-            | Some c2 -> acc + Bool.to_int Char.(c = c2))
-      in
-      count = num_found_spots
+  let new_letter_count =
+    String.exists guess ~f:(fun c ->
+        (not (Found_max.get t.found_max c))
+        && String.count guess ~f:(Char.equal c) > Min_counts.get t.min_counts c)
+  in
+  if new_letter_count then false
+  else
+    let green_spot i = Option.is_some (Greens.get t.greens i) in
+    let known_character c =
+      Found_max.get t.found_max c
+      && Greens.count_occurrences t.greens c = Min_counts.get t.min_counts c
     in
-    already_guessed || no_unknown_spots
-  in
-  let guessed_char_positions =
-    String.for_alli guess ~f:(fun i c -> spot_is_green i || bad_character i c)
-  in
-  let bad_char_counts =
-    String.for_all guess ~f:(fun c ->
-        let count_in_guess = String.count guess ~f:(Char.equal c) in
-        let capped = Found_max.get t.found_max c in
-        if capped then true else count_in_guess <= Min_counts.get t.min_counts c)
-  in
-  guessed_char_positions && bad_char_counts
+    let bad_character i c = Bad_characters.get t.bad_characters i c in
+    String.for_alli guess ~f:(fun i c ->
+        green_spot i || known_character c || bad_character i c)
+
+(* let spot_is_green i = Option.is_some (Greens.get t.greens i) in
+   let bad_character i c =
+     let already_guessed = Bad_characters.get t.bad_characters i c in
+     let no_unknown_spots =
+       let count = Min_counts.get t.min_counts c in
+       let num_found_spots =
+         List.fold (List.range 0 5) ~init:0 ~f:(fun acc i ->
+             match Greens.get t.greens i with
+             | None -> acc
+             | Some c2 -> acc + Bool.to_int Char.(c = c2))
+       in
+       count = num_found_spots
+     in
+     already_guessed || no_unknown_spots
+   in
+   let guessed_char_positions =
+     String.for_alli guess ~f:(fun i c -> spot_is_green i || bad_character i c)
+   in
+   let bad_char_counts =
+     String.for_all guess ~f:(fun c ->
+         let count_in_guess = String.count guess ~f:(Char.equal c) in
+         let capped = Found_max.get t.found_max c in
+         if capped then true else count_in_guess <= Min_counts.get t.min_counts c)
+   in
+   guessed_char_positions && bad_char_counts *)
 
 let char_guessed t c =
   Min_counts.get t.min_counts c <> 0 || Found_max.get t.found_max c
@@ -343,6 +376,19 @@ let%expect_test "merge info" =
     	4: r,
     	5:
     Counts: a 0 (M), c 0 (M), e 1, f 0 (M), i 0 (M), l 0 (M), n 0 (M), o 0 (M), r 1, s 0 (M), t 1, u 1, |}];
+  let info = add_information empty ~guess:"abase" ~answer:"abate" in
+  let info = add_information info ~guess:"abbey" ~answer:"abate" in
+  show info;
+  [%expect
+    {|
+    Greens: aba_e
+    Bad characters:
+    	1:
+    	2:
+    	3:
+    	4:
+    	5:
+    Counts: a 2, b 1 (M), e 1 (M), s 0 (M), y 0 (M), |}];
   ()
 
 let%expect_test "word elimination" =
@@ -353,11 +399,11 @@ let%expect_test "word elimination" =
   let t = get_info "abcde" "zzazz" in
   let bad_yellow = can_word_be_answer t "fffff" in
   print_s [%sexp (bad_yellow : bool)];
-  [%expect {| true |}];
-  let t = get_info "abcde" "fghij" in
-  let bad_gray = can_word_be_answer t "zzazz" in
-  print_s [%sexp (bad_gray : bool)];
   [%expect {| false |}];
+  let t = get_info "abcde" "fghij" in
+  let good_answer = can_word_be_answer t "zzazz" in
+  print_s [%sexp (good_answer : bool)];
+  [%expect {| true |}];
   let t = get_info "oooaa" "bbboo" in
   let above_max_count = can_word_be_answer t "bbooo" in
   print_s [%sexp (above_max_count : bool)];
@@ -371,7 +417,11 @@ let%expect_test "word elimination" =
   let t = add_information t ~guess:"press" ~answer:"erupt" in
   let good_answer_erupt = can_word_be_answer t "erupt" in
   print_s [%sexp (good_answer_erupt : bool)];
-  [%expect {| true |}]
+  [%expect {| true |}];
+  let t = add_information empty ~guess:"abbey" ~answer:"abate" in
+  print_s [%sexp (can_word_be_answer t "aback" : bool)];
+  [%expect {| false |}];
+  ()
 
 let%expect_test "is guess useless" =
   let t = add_information empty ~guess:"abcde" ~answer:"awxyz" in

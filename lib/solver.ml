@@ -47,6 +47,15 @@ let get_counts remaining_answers information guess =
   counts
 
 let cache_hits = ref 0
+let stuff = ref []
+
+let show_stuff () =
+  print_endline "Showing stuff: ";
+  printf "cur length: %d\n" (List.length !stuff);
+  List.iter (List.rev !stuff) ~f:(fun (guess, info) ->
+      printf "\n\nGuess: %S\n" guess;
+      Information.show info);
+  print_endline "end show stuff"
 
 let rec get_guess dictionary information =
   let eval_guess guess remaining_answers best_so_far =
@@ -60,11 +69,13 @@ let rec get_guess dictionary information =
             get_best_possible_ev total_guesses answers_examined num_answers
           in
           if float_gt best_possible_ev best_so_far then (infinity, infinity)
-          else
+          else (
+            stuff := (guess, info) :: !stuff;
             let _, expected_num_guesses = get_guess dictionary info in
+            stuff := List.tl_exn !stuff;
             let c = of_int count in
             ( total_guesses + ((1. + expected_num_guesses) * c),
-              answers_examined + c ))
+              answers_examined + c )))
     in
     Float.(total_guesses / of_int num_answers)
   in
@@ -77,18 +88,14 @@ let rec get_guess dictionary information =
     | None ->
         let dictionary = Dictionary.filter_dictionary dictionary information in
         let remaining_answers = Dictionary.get_answers dictionary in
-        (* let counts = count_letters remaining_answers in
-           let guesses =
-               List.sort (Dictionary.get_words dictionary) ~compare:(fun w1 w2 ->
-                   score_word counts information w2
-                   - score_word counts information w1)
-             in *)
-        let guesses = Dictionary.get_words dictionary in
+        let counts = count_letters remaining_answers in
+        let guesses =
+          List.sort (Dictionary.get_words dictionary) ~compare:(fun w1 w2 ->
+              score_word counts information w2
+              - score_word counts information w1)
+        in
         let res =
           List.fold guesses ~init:("", Float.infinity) ~f:(fun acc word ->
-              printf "cache size: %d - cache hits: %d\n" (Hashtbl.length cache)
-                !cache_hits;
-              Information.show information;
               let _best_word, best_score = acc in
               let score = eval_guess word remaining_answers best_score in
               if float_lt score best_score then (word, score) else acc)

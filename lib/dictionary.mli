@@ -1,9 +1,15 @@
 open! Core
 
-type t
+type t [@@deriving sexp]
 
 val create :
-  string -> string -> ?num_guesses:int -> ?num_answers:int -> unit -> t
+  string ->
+  string ->
+  ?num_guesses:int ->
+  ?num_answers:int ->
+  ?shuffle:bool ->
+  unit ->
+  t
 
 val get_words : t -> string list
 val get_answers : t -> string list
