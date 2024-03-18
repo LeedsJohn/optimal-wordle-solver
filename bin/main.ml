@@ -49,8 +49,11 @@ let get_guess_command =
          Dictionary.create "guesses.txt" "answers.txt" ~num_guesses ~num_answers
            ~shuffle:(not no_shuffle) ()
        in
+       let guesses, answers =
+         (Dictionary.get_words dictionary, Dictionary.get_answers dictionary)
+       in
        let best_guess, expected_guesses =
-         Solver.get_guess ~dictionary ~information:Information.empty
+         Solver.get_guess ~guesses ~answers ~information:Information.empty
            ~max_guesses ~exploration_rate
        in
        printf

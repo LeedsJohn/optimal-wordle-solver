@@ -26,11 +26,10 @@ let get_counts remaining_answers information guess =
           match n with None -> 1 | Some n -> n + 1));
   counts
 
-let expected_answers_remaining dictionary guess =
-  let remaining_answers = Dictionary.get_answers dictionary in
-  let num_results = List.length remaining_answers |> Float.of_int in
+let expected_answers_remaining answers guess =
+  let num_results = List.length answers |> Float.of_int in
   let possible_results = Hashtbl.create (module String) in
-  List.iter remaining_answers ~f:(fun answer ->
+  List.iter answers ~f:(fun answer ->
       let result = Evaluator.evaluate guess answer in
       Hashtbl.update possible_results result ~f:(fun n ->
           match n with None -> 1 | Some n -> n + 1));
@@ -38,24 +37,23 @@ let expected_answers_remaining dictionary guess =
       let count = Float.of_int count in
       Float.(acc + (count / num_results * count)))
 
-let get_guesses dictionary n =
-  let answers = Dictionary.get_answers dictionary in
+let get_guesses words answers n =
   if List.length answers <= 2 then answers
   else
     let guesses =
-      List.map (Dictionary.get_words dictionary) ~f:(fun word ->
-          (word, expected_answers_remaining dictionary word))
+      List.map words ~f:(fun word ->
+          (word, expected_answers_remaining answers word))
       |> List.sort ~compare:(fun (_, n1) (_, n2) -> Float.compare n1 n2)
     in
     List.map (List.take guesses n) ~f:fst
 
 let cache_hits = ref 0
 
-let rec get_guess ~dictionary ~information ~max_guesses ~exploration_rate =
-  let eval_guess dictionary guess best_so_far =
-    let remaining_answers = Dictionary.get_answers dictionary in
-    let counts = get_counts remaining_answers information guess in
-    let num_answers = List.length remaining_answers in
+let rec get_guess ~guesses ~answers ~information ~max_guesses ~exploration_rate
+    =
+  let eval_guess answers guess best_so_far =
+    let counts = get_counts answers information guess in
+    let num_answers = List.length answers in
     let total_guesses, _ =
       Hashtbl.fold counts ~init:(Float.zero, Float.zero)
         ~f:(fun
@@ -67,7 +65,7 @@ let rec get_guess ~dictionary ~information ~max_guesses ~exploration_rate =
           if float_gt best_possible_ev best_so_far then (infinity, infinity)
           else
             let _, expected_num_guesses =
-              get_guess ~dictionary ~information
+              get_guess ~guesses ~answers ~information
                 ~max_guesses:Int.(max_guesses - 1)
                 ~exploration_rate
             in
@@ -85,12 +83,14 @@ let rec get_guess ~dictionary ~information ~max_guesses ~exploration_rate =
         cache_hits := !cache_hits + 1;
         res
     | None ->
-        let dictionary = Dictionary.filter_dictionary dictionary information in
-        let guesses = get_guesses dictionary exploration_rate in
+        let answers =
+          List.filter answers ~f:(Information.can_word_be_answer information)
+        in
+        let guesses = get_guesses guesses answers exploration_rate in
         let res =
           List.fold guesses ~init:("", Float.infinity) ~f:(fun acc word ->
               let _best_word, best_score = acc in
-              let score = eval_guess dictionary word best_score in
+              let score = eval_guess answers word best_score in
               if float_lt score best_score then (word, score) else acc)
         in
         Hashtbl.add_exn cache ~key:information ~data:res;
@@ -105,7 +105,10 @@ let rec play_game_aux ~answer ~path ~dictionary ~information ~max_guesses
     List.rev path
   else
     let guess, _expected_score =
-      get_guess ~dictionary ~information ~max_guesses ~exploration_rate
+      get_guess
+        ~guesses:(Dictionary.get_words dictionary)
+        ~answers:(Dictionary.get_answers dictionary)
+        ~information ~max_guesses ~exploration_rate
     in
     let information = Information.add_information information ~guess ~answer in
     let max_guesses = max_guesses - 1 in

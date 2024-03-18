@@ -1,7 +1,8 @@
 open! Core
 
 val get_guess :
-  dictionary:Dictionary.t ->
+  guesses:string list ->
+  answers:string list ->
   information:Information.t ->
   max_guesses:int ->
   exploration_rate:int ->
