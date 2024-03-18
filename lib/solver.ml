@@ -26,25 +26,25 @@ let get_counts remaining_answers information guess =
           match n with None -> 1 | Some n -> n + 1));
   counts
 
-let expected_answers_remaining dictionary information guess =
+let expected_answers_remaining dictionary guess =
   let remaining_answers = Dictionary.get_answers dictionary in
-  let counts = get_counts remaining_answers information guess in
-  let total =
-    Hashtbl.fold counts ~init:0 ~f:(fun ~key:info ~data:count acc ->
-        let expected =
-          Dictionary.num_answers_remaining dictionary info * count
-        in
-        acc + expected)
-  in
-  Float.(of_int total / of_int (List.length remaining_answers))
+  let num_results = List.length remaining_answers |> Float.of_int in
+  let possible_results = Hashtbl.create (module String) in
+  List.iter remaining_answers ~f:(fun answer ->
+      let result = Evaluator.evaluate guess answer in
+      Hashtbl.update possible_results result ~f:(fun n ->
+          match n with None -> 1 | Some n -> n + 1));
+  Hashtbl.fold possible_results ~init:0. ~f:(fun ~key:_ ~data:count acc ->
+      let count = Float.of_int count in
+      Float.(acc + (count / num_results * count)))
 
-let get_guesses dictionary information n =
+let get_guesses dictionary n =
   let answers = Dictionary.get_answers dictionary in
   if List.length answers <= 2 then answers
   else
     let guesses =
       List.map (Dictionary.get_words dictionary) ~f:(fun word ->
-          (word, expected_answers_remaining dictionary information word))
+          (word, expected_answers_remaining dictionary word))
       |> List.sort ~compare:(fun (_, n1) (_, n2) -> Float.compare n1 n2)
     in
     List.map (List.take guesses n) ~f:fst
@@ -86,7 +86,7 @@ let rec get_guess ~dictionary ~information ~max_guesses ~exploration_rate =
         res
     | None ->
         let dictionary = Dictionary.filter_dictionary dictionary information in
-        let guesses = get_guesses dictionary information exploration_rate in
+        let guesses = get_guesses dictionary exploration_rate in
         let res =
           List.fold guesses ~init:("", Float.infinity) ~f:(fun acc word ->
               let _best_word, best_score = acc in
