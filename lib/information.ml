@@ -162,8 +162,7 @@ let filter_bad_characters t =
   in
   { t with bad_characters }
 
-let get_info_aux guess answer =
-  let result = Evaluator.evaluate guess answer in
+let get_info_aux guess result =
   let greens =
     String.foldi result ~init:0 ~f:(fun i acc c ->
         if Char.(c = 'g') then Greens.set acc i (String.unsafe_get guess i)
@@ -208,11 +207,12 @@ let get_info_aux guess answer =
 let cache = Hashtbl.create (module String)
 
 let get_info guess answer =
-  match Hashtbl.find cache (guess ^ answer) with
+  let result = Evaluator.evaluate guess answer in
+  match Hashtbl.find cache (guess ^ result) with
   | Some res -> res
   | None ->
-      let res = get_info_aux guess answer in
-      Hashtbl.add_exn cache ~key:(guess ^ answer) ~data:res;
+      let res = get_info_aux guess result in
+      Hashtbl.add_exn cache ~key:(guess ^ result) ~data:res;
       res
 
 let add_information t ~guess ~answer =

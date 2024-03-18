@@ -120,3 +120,20 @@ let play_game answer =
   let dictionary = Dictionary.filter_dictionary dictionary information in
   play_game_aux ~answer ~path:[ "salet" ] ~dictionary ~information
     ~max_guesses:4 ~exploration_rate:20
+
+let get_total_guesses possible_answers =
+  let dictionary = Dictionary.create "guesses.txt" "answers.txt" () in
+  List.foldi possible_answers ~init:0 ~f:(fun i acc answer ->
+      let information =
+        Information.add_information Information.empty ~guess:"salet" ~answer
+      in
+      let path =
+        play_game_aux ~answer ~path:[ "salet" ] ~dictionary ~information
+          ~max_guesses:4 ~exploration_rate:20
+      in
+      let acc = acc + List.length path in
+      printf "%S (%d): %d Cache size: %d Cache hits: %d " answer i acc
+        (cache_size ()) !cache_hits;
+      print_s [%sexp (path : string list)];
+      Out_channel.flush Out_channel.stdout;
+      acc)

@@ -10,3 +10,4 @@ val get_guess :
 val play_game : string -> string list
 val cache_size : unit -> int
 val num_cache_hits : unit -> int
+val get_total_guesses : string list -> int

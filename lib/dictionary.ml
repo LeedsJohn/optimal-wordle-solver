@@ -22,14 +22,10 @@ let is_good_answer guess result answer =
   String.(Evaluator.evaluate guess answer = result)
 
 let filter_dictionary t information =
-  let words =
-    List.filter t.words ~f:(fun word ->
-        not (Information.is_guess_useless information word))
-  in
   let answers =
     List.filter t.answers ~f:(Information.can_word_be_answer information)
   in
-  { words; answers }
+  { t with answers }
 
 let num_answers_remaining t guess result =
   List.count t.answers ~f:(is_good_answer guess result)
