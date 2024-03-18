@@ -13,19 +13,23 @@ let get_guess_command =
        flag ~aliases:[ "--max-guesses" ] "-mg"
          (optional_with_default 5 int)
          ~doc:
-           "Maximum number of guesses to explore before giving up. Note: \
-            Setting too low may result in either not finding a guess or \
+           "Maximum number of guesses to explore before giving up (default 5). \
+            Note: Setting too low may result in either not finding a guess or \
             finding a suboptimal guess"
      and exploration_rate =
        flag ~aliases:[ "--exploration-rate" ] "-er"
-         (optional_with_default 10 int)
+         (optional_with_default 20 int)
          ~doc:
-           "How many guesses at each level to explore. The best guesses are \
-            determined by finding the expected number of answers to be \
-            eliminated by making a guess. Note: Setting too low may result in \
-            finding a suboptimal guess"
+           "How many guesses at each level to explore (default 20). The best \
+            guesses are determined by finding the expected number of answers \
+            to be eliminated by making a guess. Note: Setting too low may \
+            result in finding a suboptimal guess"
+     and no_shuffle =
+       flag ~aliases:[ "--no-shuffle" ] "-ns" no_arg
+         ~doc:
+           "Specify to not shuffle the dictionary and choose guesses / answers \
+            alphabetically"
      in
-
      fun () ->
        let num_answers =
          Float.(of_int num_words * answer_percent |> round_up) |> Int.of_float
@@ -33,7 +37,7 @@ let get_guess_command =
        let num_guesses = num_words - num_answers in
        let dictionary =
          Dictionary.create "guesses.txt" "answers.txt" ~num_guesses ~num_answers
-           ~shuffle:true ()
+           ~shuffle:(not no_shuffle) ()
        in
        let best_guess, expected_guesses =
          Solver.get_guess ~dictionary ~information:Information.empty

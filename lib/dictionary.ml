@@ -2,7 +2,7 @@ open! Core
 
 type t = { words : string list; answers : string list } [@@deriving sexp]
 
-let create guesses answers ?num_guesses ?num_answers ?(shuffle = false) () =
+let create guesses answers ?num_guesses ?num_answers ?(shuffle = true) () =
   let crop l n = match n with None -> l | Some n -> List.take l n in
   let guesses = In_channel.read_lines guesses in
   let answers = In_channel.read_lines answers in
@@ -13,9 +13,6 @@ let create guesses answers ?num_guesses ?num_answers ?(shuffle = false) () =
     else (guesses, answers)
   in
   let guesses, answers = (crop guesses num_guesses, crop answers num_answers) in
-
-  print_s [%sexp (guesses : string list)];
-  print_s [%sexp (answers : string list)];
   { words = guesses @ answers; answers }
 
 let get_words t = t.words
@@ -31,6 +28,5 @@ let filter_dictionary t information =
   in
   { words; answers }
 
-(* TODO: add cache *)
 let num_answers_remaining t information =
   List.count t.answers ~f:(Information.can_word_be_answer information)

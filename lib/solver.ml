@@ -98,3 +98,25 @@ let rec get_guess ~dictionary ~information ~max_guesses ~exploration_rate =
 
 let cache_size () = Hashtbl.length cache
 let num_cache_hits () = !cache_hits
+
+let rec play_game_aux ~answer ~path ~dictionary ~information ~max_guesses
+    ~exploration_rate =
+  if List.length path > 0 && String.(List.hd_exn path = answer) then
+    List.rev path
+  else
+    let guess, _expected_score =
+      get_guess ~dictionary ~information ~max_guesses ~exploration_rate
+    in
+    let information = Information.add_information information ~guess ~answer in
+    let max_guesses = max_guesses - 1 in
+    play_game_aux ~answer ~path:(guess :: path) ~dictionary ~information
+      ~max_guesses ~exploration_rate
+
+let play_game answer =
+  let information =
+    Information.add_information Information.empty ~guess:"salet" ~answer
+  in
+  let dictionary = Dictionary.create "guesses.txt" "answers.txt" () in
+  let dictionary = Dictionary.filter_dictionary dictionary information in
+  play_game_aux ~answer ~path:[ "salet" ] ~dictionary ~information
+    ~max_guesses:4 ~exploration_rate:20
