@@ -14,3 +14,4 @@ val create :
 val get_words : t -> string list
 val get_answers : t -> string list
 val filter_dictionary : t -> Information.t -> t
+val num_answers_remaining : t -> Information.t -> int

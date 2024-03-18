@@ -27,7 +27,10 @@ let filter_dictionary t information =
         not (Information.is_guess_useless information word))
   in
   let answers =
-    List.filter t.answers ~f:(fun word ->
-        Information.can_word_be_answer information word)
+    List.filter t.answers ~f:(Information.can_word_be_answer information)
   in
   { words; answers }
+
+(* TODO: add cache *)
+let num_answers_remaining t information =
+  List.count t.answers ~f:(Information.can_word_be_answer information)
