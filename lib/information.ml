@@ -206,8 +206,7 @@ let get_info_aux guess result =
 
 let cache = Hashtbl.create (module String)
 
-let get_info guess answer =
-  let result = Evaluator.evaluate guess answer in
+let get_info guess result =
   match Hashtbl.find cache (guess ^ result) with
   | Some res -> res
   | None ->
@@ -215,8 +214,8 @@ let get_info guess answer =
       Hashtbl.add_exn cache ~key:(guess ^ result) ~data:res;
       res
 
-let add_information t ~guess ~answer =
-  let new_info = get_info guess answer in
+let add_information t ~guess ~result =
+  let new_info = get_info guess result in
   let greens = Greens.bit_or t.greens new_info.greens in
   let bad_characters =
     Bad_characters.bit_or t.bad_characters new_info.bad_characters
@@ -323,7 +322,7 @@ let show t =
   print_endline counts
 
 let%expect_test "get info" =
-  let info = get_info "aaabb" "aaabb" in
+  let info = get_info "aaabb" "ggggg" in
   show info;
   [%expect
     {|
@@ -335,7 +334,7 @@ let%expect_test "get info" =
     	4:
     	5:
     Counts: a 3, b 2, |}];
-  let info = get_info "stuff" "foots" in
+  let info = get_info "stuff" "yyxyx" in
   show info;
   [%expect
     {|
@@ -349,8 +348,8 @@ let%expect_test "get info" =
     Counts: f 1 (M), s 1, t 1, u 0 (M), |}]
 
 let%expect_test "merge info" =
-  let info = get_info "soare" "erupt" in
-  let info = add_information info ~guess:"clint" ~answer:"erupt" in
+  let info = get_info "soare" "xxxyy" in
+  let info = add_information info ~guess:"clint" ~result:"xxxxg" in
   (* bad characters for the 5th letter are erased once the t is found *)
   show info;
   [%expect
@@ -363,7 +362,7 @@ let%expect_test "merge info" =
     	4: r,
     	5:
     Counts: a 0 (M), c 0 (M), e 1, i 0 (M), l 0 (M), n 0 (M), o 0 (M), r 1, s 0 (M), t 1, |}];
-  let info = add_information info ~guess:"stuff" ~answer:"erupt" in
+  let info = add_information info ~guess:"stuff" ~result:"xygxx" in
   (* bad characters stay erased for 5th letter *)
   show info;
   [%expect
@@ -376,8 +375,8 @@ let%expect_test "merge info" =
     	4: r,
     	5:
     Counts: a 0 (M), c 0 (M), e 1, f 0 (M), i 0 (M), l 0 (M), n 0 (M), o 0 (M), r 1, s 0 (M), t 1, u 1, |}];
-  let info = add_information empty ~guess:"abase" ~answer:"abate" in
-  let info = add_information info ~guess:"abbey" ~answer:"abate" in
+  let info = add_information empty ~guess:"abase" ~result:"gggxg" in
+  let info = add_information info ~guess:"abbey" ~result:"ggxyx" in
   show info;
   [%expect
     {|
@@ -392,42 +391,42 @@ let%expect_test "merge info" =
   ()
 
 let%expect_test "word elimination" =
-  let t = get_info "abcde" "zzzye" in
+  let t = get_info "abcde" "xxxxg" in
   let bad_green = can_word_be_answer t "fffff" in
   print_s [%sexp (bad_green : bool)];
   [%expect {| false |}];
-  let t = get_info "abcde" "zzazz" in
+  let t = get_info "abcde" "yxxxx" in
   let bad_yellow = can_word_be_answer t "fffff" in
   print_s [%sexp (bad_yellow : bool)];
   [%expect {| false |}];
-  let t = get_info "abcde" "fghij" in
+  let t = get_info "abcde" "yxxxx" in
   let good_answer = can_word_be_answer t "zzazz" in
   print_s [%sexp (good_answer : bool)];
   [%expect {| true |}];
-  let t = get_info "oooaa" "bbboo" in
+  let t = get_info "oooaa" "yyxxx" in
   let above_max_count = can_word_be_answer t "bbooo" in
   print_s [%sexp (above_max_count : bool)];
   [%expect {| false |}];
   let t =
-    add_information (get_info "crane" "erupt") ~guess:"defer" ~answer:"erupt"
+    add_information (get_info "crane" "xgxxy") ~guess:"defer" ~result:"xyxxy"
   in
   let good_answer_press = can_word_be_answer t "press" in
   print_s [%sexp (good_answer_press : bool)];
   [%expect {| true |}];
-  let t = add_information t ~guess:"press" ~answer:"erupt" in
+  let t = add_information t ~guess:"press" ~result:"xgyxx" in
   let good_answer_erupt = can_word_be_answer t "erupt" in
   print_s [%sexp (good_answer_erupt : bool)];
   [%expect {| true |}];
-  let t = add_information empty ~guess:"abbey" ~answer:"abate" in
+  let t = add_information empty ~guess:"abbey" ~result:"ggxyx" in
   print_s [%sexp (can_word_be_answer t "aback" : bool)];
   [%expect {| false |}];
   ()
 
 let%expect_test "is guess useless" =
-  let t = add_information empty ~guess:"abcde" ~answer:"awxyz" in
+  let t = add_information empty ~guess:"abcde" ~result:"gxxxx" in
   print_s [%sexp (is_guess_useless t "aedcb" : bool)];
   [%expect {| true |}];
-  let t = add_information empty ~guess:"abcde" ~answer:"vwxya" in
+  let t = add_information empty ~guess:"abcde" ~result:"yxxxx" in
   print_s [%sexp (is_guess_useless t "abcde" : bool)];
   [%expect {| true |}];
   print_s [%sexp (is_guess_useless t "edcba" : bool)];

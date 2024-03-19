@@ -1,15 +1,9 @@
 open! Core
 open Wordle_solver
 
-(* let i = (Sys.get_argv ()).(1) |> Int.of_string
-   let a = 385 * (i - 1)
-   let b = if i <> 6 then a + 385 else 0
-   let d = Dictionary.create "guesses.txt" "answers.txt" ~shuffle:false ()
-   let answers = List.slice (Dictionary.get_answers d) a b
-   let n = Solver.get_total_guesses answers
-
-   let () =
-     printf "Total guesses: %d (total answers: %d)\n" n (List.length answers) *)
+let play_game_interactive_command =
+  Command.basic ~summary:"Interactively play a game of Wordle"
+    (Command.Param.return (fun () -> Solver.play_game_interactive ()))
 
 let get_guess_command =
   Command.basic ~summary:"Get a guess for a Wordle game"
@@ -62,4 +56,10 @@ let get_guess_command =
          best_guess expected_guesses (Solver.cache_size ())
          (Solver.num_cache_hits ()))
 
-let () = Command_unix.run get_guess_command
+let command =
+  Command.group ~summary:"Wordle Commands"
+    [
+      ("play", play_game_interactive_command); ("get-guess", get_guess_command);
+    ]
+
+let () = Command_unix.run command

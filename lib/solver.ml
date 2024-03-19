@@ -21,7 +21,10 @@ let get_best_possible_ev guesses_taken answers_examined num_answers =
 let get_counts remaining_answers information guess =
   let counts = Hashtbl.create (module Information) in
   List.iter remaining_answers ~f:(fun answer ->
-      let new_info = Information.add_information information ~guess ~answer in
+      let new_info =
+        Information.add_information information ~guess
+          ~result:(Evaluator.evaluate guess answer)
+      in
       Hashtbl.update counts new_info ~f:(fun n ->
           match n with None -> 1 | Some n -> n + 1));
   counts
@@ -38,7 +41,12 @@ let expected_answers_remaining answers guess =
       Float.(acc + (count / num_results * count)))
 
 let get_guesses words answers n =
-  if List.length answers <= 2 then answers
+  if List.length answers = 1 && String.(List.hd_exn answers = "boozy") then
+    print_endline "ok here we are";
+  if List.length answers <= 2 then (
+    printf "yep the length is under 2 - returning answers: ";
+    print_s [%sexp (answers : string list)];
+    answers)
   else
     let guesses =
       List.map words ~f:(fun word ->
@@ -75,7 +83,7 @@ let rec get_guess ~guesses ~answers ~information ~max_guesses ~exploration_rate
     in
     Float.(total_guesses / of_int num_answers)
   in
-  if Information.all_greens information then ("", 0.)
+  if List.length answers = 1 then (List.hd_exn answers, 1.)
   else if max_guesses = 0 then ("", Float.infinity)
   else
     match Hashtbl.find cache information with
@@ -93,7 +101,7 @@ let rec get_guess ~guesses ~answers ~information ~max_guesses ~exploration_rate
               let score = eval_guess answers word best_score in
               if float_lt score best_score then (word, score) else acc)
         in
-        Hashtbl.add_exn cache ~key:information ~data:res;
+        if max_guesses > 2 then Hashtbl.add_exn cache ~key:information ~data:res;
         res
 
 let cache_size () = Hashtbl.length cache
@@ -101,8 +109,7 @@ let num_cache_hits () = !cache_hits
 
 let rec play_game_aux ~answer ~path ~dictionary ~information ~max_guesses
     ~exploration_rate =
-  if List.length path > 0 && String.(List.hd_exn path = answer) then
-    List.rev path
+  if String.(List.hd_exn path = answer) then List.rev path
   else
     let guess, _expected_score =
       get_guess
@@ -110,29 +117,39 @@ let rec play_game_aux ~answer ~path ~dictionary ~information ~max_guesses
         ~answers:(Dictionary.get_answers dictionary)
         ~information ~max_guesses ~exploration_rate
     in
-    let information = Information.add_information information ~guess ~answer in
+    let information =
+      Information.add_information information ~guess
+        ~result:(Evaluator.evaluate guess answer)
+    in
     let max_guesses = max_guesses - 1 in
     play_game_aux ~answer ~path:(guess :: path) ~dictionary ~information
       ~max_guesses ~exploration_rate
 
 let play_game answer =
+  let guess = "salet" in
   let information =
-    Information.add_information Information.empty ~guess:"salet" ~answer
+    Information.add_information Information.empty ~guess
+      ~result:(Evaluator.evaluate guess answer)
   in
+  let path = [ "salet" ] in
   let dictionary = Dictionary.create "guesses.txt" "answers.txt" () in
   let dictionary = Dictionary.filter_dictionary dictionary information in
-  play_game_aux ~answer ~path:[ "salet" ] ~dictionary ~information
-    ~max_guesses:4 ~exploration_rate:20
+  printf "NUM ANSWERS: %d\n" (List.length (Dictionary.get_answers dictionary));
+  print_s [%sexp (Dictionary.get_answers dictionary : string list)];
+  Out_channel.flush Out_channel.stdout;
+  play_game_aux ~answer ~path ~dictionary ~information ~max_guesses:4
+    ~exploration_rate:20
 
 let get_total_guesses possible_answers =
   let dictionary = Dictionary.create "guesses.txt" "answers.txt" () in
   List.foldi possible_answers ~init:0 ~f:(fun i acc answer ->
       let information =
-        Information.add_information Information.empty ~guess:"salet" ~answer
+        Information.add_information Information.empty ~guess:"salet"
+          ~result:(Evaluator.evaluate "salet" answer)
       in
       let path =
         play_game_aux ~answer ~path:[ "salet" ] ~dictionary ~information
-          ~max_guesses:4 ~exploration_rate:20
+          ~max_guesses:4 ~exploration_rate:10
       in
       let acc = acc + List.length path in
       printf "%S (%d): %d Cache size: %d Cache hits: %d " answer i acc
@@ -140,3 +157,47 @@ let get_total_guesses possible_answers =
       print_s [%sexp (path : string list)];
       Out_channel.flush Out_channel.stdout;
       acc)
+
+let rec play_game_interactive_aux guesses answers information max_guesses =
+  printf "Enter your guess or press enter to get a recommendation: ";
+  Out_channel.flush Out_channel.stdout;
+  let guess = In_channel.input_line_exn In_channel.stdin in
+  let guess =
+    if String.length guess <> 0 then guess
+    else
+      let recommended_guess, ev =
+        get_guess ~guesses ~answers ~information ~max_guesses
+          ~exploration_rate:20
+      in
+      printf "Recommended guess: %s (expected guesses: %f): " recommended_guess
+        ev;
+      Out_channel.flush Out_channel.stdout;
+      In_channel.input_line_exn In_channel.stdin
+  in
+  printf "Enter your result: ";
+  Out_channel.flush Out_channel.stdout;
+  let result = In_channel.input_line_exn In_channel.stdin in
+  if String.(result = "ggggg") then print_endline "good job!"
+  else
+    let answers =
+      List.filter answers ~f:(fun answer ->
+          String.(Evaluator.evaluate guess answer = result))
+    in
+    let information = Information.add_information information ~guess ~result in
+    play_game_interactive_aux guesses answers information (max_guesses - 1)
+
+let play_game_interactive () =
+  printf "Enter your guess: ";
+  Out_channel.flush Out_channel.stdout;
+  let guess = In_channel.input_line_exn In_channel.stdin in
+  printf "Enter your result: ";
+  Out_channel.flush Out_channel.stdout;
+  let result = In_channel.input_line_exn In_channel.stdin in
+  let information =
+    Information.add_information Information.empty ~guess ~result
+  in
+  let dictionary = Dictionary.create "guesses.txt" "answers.txt" () in
+  let guesses, answers =
+    (Dictionary.get_words dictionary, Dictionary.get_answers dictionary)
+  in
+  play_game_interactive_aux guesses answers information 5
