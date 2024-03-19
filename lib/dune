@@ -1,6 +1,6 @@
 (library
  (name wordle_solver)
- (libraries core ppx_jane)
+ (libraries core core_unix.sys_unix ppx_jane)
  (preprocess
   (pps ppx_jane))
  (inline_tests))

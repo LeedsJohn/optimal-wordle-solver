@@ -5,6 +5,15 @@ let play_game_interactive_command =
   Command.basic ~summary:"Interactively play a game of Wordle"
     (Command.Param.return (fun () -> Solver.play_game_interactive ()))
 
+let make_cache_command =
+  Command.basic ~summary:"Fill the cache of the best second guess"
+    (Command.Param.return (fun () ->
+         let d = Dictionary.create "guesses.txt" "answers.txt" () in
+         let guesses, answers =
+           (Dictionary.get_words d, Dictionary.get_answers d)
+         in
+         Solver.create_cache guesses answers))
+
 let test_command =
   Command.basic
     ~summary:"Get the average number of guesses to solve all possible answers"
@@ -74,13 +83,10 @@ let get_guess_command =
        in
        let best_guess, expected_guesses =
          Solver.get_guess ~guesses ~answers ~information:Information.empty
-           ~max_guesses ~exploration_rate
+           ~first_guess:false ~max_guesses ~exploration_rate
        in
-       printf
-         "Best guess: %S (Expected guesses: %f)\n\
-          Cache size: %d (Cache hits: %d)\n"
-         best_guess expected_guesses (Solver.cache_size ())
-         (Solver.num_cache_hits ()))
+       printf "Best guess: %S (Expected guesses: %f)\n" best_guess
+         expected_guesses)
 
 let command =
   Command.group ~summary:"Wordle Commands"
@@ -88,6 +94,7 @@ let command =
       ("play", play_game_interactive_command);
       ("get-guess", get_guess_command);
       ("test", test_command);
+      ("make-cache", make_cache_command);
     ]
 
 let () = Command_unix.run command
