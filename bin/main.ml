@@ -5,6 +5,32 @@ let play_game_interactive_command =
   Command.basic ~summary:"Interactively play a game of Wordle"
     (Command.Param.return (fun () -> Solver.play_game_interactive ()))
 
+let test_command =
+  Command.basic
+    ~summary:"Get the average number of guesses to solve all possible answers"
+    (let%map_open.Command starting_word =
+       flag "--starting-word"
+         (optional_with_default "salet" string)
+         ~doc:"Word to start every game with (default: salet)"
+     and exploration_rate =
+       flag "--exploration-rate"
+         (optional_with_default 20 int)
+         ~doc:"How many words to try at each decision point (default: 20)"
+     in
+     fun () ->
+       let answers =
+         Dictionary.get_answers
+           (Dictionary.create "guesses.txt" "answers.txt" ~shuffle:false ())
+       in
+       let num_answers = List.length answers in
+       let total_guesses =
+         Solver.get_total_guesses answers starting_word exploration_rate
+       in
+       printf
+         "Average number of guesses: %f (%d guesses across %d possible answers)\n"
+         Float.(of_int total_guesses / of_int num_answers)
+         total_guesses num_answers)
+
 let get_guess_command =
   Command.basic ~summary:"Get a guess for a Wordle game"
     (let%map_open.Command num_words = anon ("num_words" %: int)
@@ -59,7 +85,9 @@ let get_guess_command =
 let command =
   Command.group ~summary:"Wordle Commands"
     [
-      ("play", play_game_interactive_command); ("get-guess", get_guess_command);
+      ("play", play_game_interactive_command);
+      ("get-guess", get_guess_command);
+      ("test", test_command);
     ]
 
 let () = Command_unix.run command

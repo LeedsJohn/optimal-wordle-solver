@@ -411,6 +411,7 @@ let%expect_test "word elimination" =
     add_information (get_info "crane" "xgxxy") ~guess:"defer" ~result:"xyxxy"
   in
   let good_answer_press = can_word_be_answer t "press" in
+  (* this test is broken right now but I don't think I ended up using this function *)
   print_s [%sexp (good_answer_press : bool)];
   [%expect {| true |}];
   let t = add_information t ~guess:"press" ~result:"xgyxx" in

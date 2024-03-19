@@ -41,12 +41,7 @@ let expected_answers_remaining answers guess =
       Float.(acc + (count / num_results * count)))
 
 let get_guesses words answers n =
-  if List.length answers = 1 && String.(List.hd_exn answers = "boozy") then
-    print_endline "ok here we are";
-  if List.length answers <= 2 then (
-    printf "yep the length is under 2 - returning answers: ";
-    print_s [%sexp (answers : string list)];
-    answers)
+  if List.length answers <= 2 then answers
   else
     let guesses =
       List.map words ~f:(fun word ->
@@ -140,16 +135,16 @@ let play_game answer =
   play_game_aux ~answer ~path ~dictionary ~information ~max_guesses:4
     ~exploration_rate:20
 
-let get_total_guesses possible_answers =
+let get_total_guesses possible_answers starting_word exploration_rate =
   let dictionary = Dictionary.create "guesses.txt" "answers.txt" () in
   List.foldi possible_answers ~init:0 ~f:(fun i acc answer ->
       let information =
-        Information.add_information Information.empty ~guess:"salet"
-          ~result:(Evaluator.evaluate "salet" answer)
+        Information.add_information Information.empty ~guess:starting_word
+          ~result:(Evaluator.evaluate starting_word answer)
       in
       let path =
         play_game_aux ~answer ~path:[ "salet" ] ~dictionary ~information
-          ~max_guesses:4 ~exploration_rate:10
+          ~max_guesses:4 ~exploration_rate
       in
       let acc = acc + List.length path in
       printf "%S (%d): %d Cache size: %d Cache hits: %d " answer i acc
