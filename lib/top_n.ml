@@ -12,9 +12,9 @@ type t = {
 
 let empty_entry = (Float.infinity, "")
 
-let create len =
+let create ~n =
   {
-    ar = Array.create ~len empty_entry;
+    ar = Array.create ~len:n empty_entry;
     used_words = Hash_set.create (module String);
     min_score = Float.infinity;
     min_word = "";
@@ -38,7 +38,7 @@ let update_pos t =
         t.max_score <- score;
         t.max_word <- word))
 
-let add t word score =
+let add t ~word ~score =
   if Float.(score >= t.max_score) || Hash_set.mem t.used_words word then ()
   else (
     Hash_set.remove t.used_words t.max_word;

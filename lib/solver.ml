@@ -35,14 +35,14 @@ let expected_answers_remaining answers guess =
       Float.(acc + (count * count / num_results)))
 
 let get_guesses words answers n =
-  let top_n = Top_n.create n in
+  let top_n = Top_n.create ~n in
   List.iter answers ~f:(fun word ->
-      Top_n.add top_n word (expected_answers_remaining answers word));
+      Top_n.add top_n ~word ~score:(expected_answers_remaining answers word));
   let score, _ = Top_n.get_min top_n in
   if Float.(score > 1.00001) then
     List.iter words ~f:(fun word ->
         if Float.(fst (Top_n.get_min top_n) > 1.00001) then
-          Top_n.add top_n word (expected_answers_remaining answers word));
+          Top_n.add top_n ~word ~score:(expected_answers_remaining answers word));
   Top_n.to_list top_n
 
 let rec get_guess_aux ~guesses ~answers ~max_guesses ~exploration_rate =
