@@ -7,21 +7,22 @@ let play_game_interactive_command =
 
 let make_cache_command =
   Command.basic ~summary:"Fill the cache of the best second guess"
-    (Command.Param.return (fun () ->
-         let d = Dictionary.create "guesses.txt" "answers.txt" () in
-         let guesses, answers =
-           (Dictionary.get_words d, Dictionary.get_answers d)
-         in
-         Solver.create_cache guesses answers))
+    (let%map_open.Command exploration_rate =
+       flag "--exploration-rate"
+         (optional_with_default 20 int)
+         ~doc:"How many words to try at each decision point (default: 20)"
+     in
+     fun () ->
+       let d = Dictionary.create "guesses.txt" "answers.txt" () in
+       let guesses, answers =
+         (Dictionary.get_words d, Dictionary.get_answers d)
+       in
+       Solver.create_cache ~guesses ~answers ~exploration_rate)
 
 let test_command =
   Command.basic
     ~summary:"Get the average number of guesses to solve all possible answers"
-    (let%map_open.Command starting_word =
-       flag "--starting-word"
-         (optional_with_default "salet" string)
-         ~doc:"Word to start every game with (default: salet)"
-     and exploration_rate =
+    (let%map_open.Command exploration_rate =
        flag "--exploration-rate"
          (optional_with_default 20 int)
          ~doc:"How many words to try at each decision point (default: 20)"
@@ -32,9 +33,7 @@ let test_command =
            (Dictionary.create "guesses.txt" "answers.txt" ~shuffle:false ())
        in
        let num_answers = List.length answers in
-       let total_guesses =
-         Solver.get_total_guesses answers starting_word exploration_rate
-       in
+       let total_guesses = Solver.get_total_guesses answers exploration_rate in
        printf
          "Average number of guesses: %f (%d guesses across %d possible answers)\n"
          Float.(of_int total_guesses / of_int num_answers)
@@ -82,8 +81,8 @@ let get_guess_command =
          (Dictionary.get_words dictionary, Dictionary.get_answers dictionary)
        in
        let best_guess, expected_guesses =
-         Solver.get_guess ~guesses ~answers ~information:Information.empty
-           ~first_guess:false ~max_guesses ~exploration_rate
+         Solver.get_guess ~guesses ~answers ~max_guesses ~exploration_rate
+           ~prev_results:[]
        in
        printf "Best guess: %S (Expected guesses: %f)\n" best_guess
          expected_guesses)

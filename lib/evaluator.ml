@@ -1,12 +1,7 @@
 open! Core
 
 module Word_pair = struct
-  module T = struct
-    type t = string * string [@@deriving compare, hash, sexp_of]
-  end
-
-  include T
-  include Comparator.Make (T)
+  type t = string * string [@@deriving compare, hash, sexp_of]
 end
 
 let cache = Hashtbl.create (module Word_pair)
@@ -22,6 +17,7 @@ let evaluate guess answer =
       in
       String.iteri guess ~f:(fun i c ->
           if Char.(c = String.unsafe_get answer i) then res.(i) <- 'g');
+
       String.iteri guess ~f:(fun i c ->
           let count = String.count answer ~f:(Char.equal c) in
           let found_characters = count_found_characters c in
