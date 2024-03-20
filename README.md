@@ -15,7 +15,7 @@ However, I still want to describe the game because there are a few intricacies.
 First, Wordle has a list of possible five-letter words to guess, but not all of these words can be the answer.
 For example, you can guess "aahed", but it can never be the answer.
 
-Secondly, when evaluating a guess given an answer, every character in the guess is assigned a color - green (`g`) if `guess[i] = `answer[i]`, yellow (`y`) if `guess[i]` is in `answer` but does not equal `guess[i]`, and otherwise, gray (`x`). 
+Secondly, when evaluating a guess given an answer, every character in the guess is assigned a color - green (`g`) if `guess[i] = answer[i]`, yellow (`y`) if `guess[i]` is in `answer` but does not equal `guess[i]`, and otherwise, gray (`x`). 
 If the answer is `lingo` and you guess `oinks`, the result will be `yggxx`.
 
 One additional subtlety is that if you guess a word where a character occurs twice and the answer only has one of that character, one of the occurrences will be marked as `x`.
