@@ -14,21 +14,6 @@ let cache =
     |> Hashtbl.m__t_of_sexp (module String) Guess_ev.t_of_sexp
   else Hashtbl.create (module String)
 
-let delta = 0.00001
-let float_eq f1 f2 = Float.(abs (f1 - f2) <= delta)
-
-let _get_best_possible_ev guesses_taken answers_examined num_answers =
-  let open Float in
-  let num_answers = of_int num_answers in
-  let remaining_answers = num_answers - answers_examined in
-  let remaining_best = ((2. * remaining_answers) - 1.) / remaining_answers in
-  let current =
-    if float_eq zero answers_examined then 0.
-    else guesses_taken / answers_examined
-  in
-  (remaining_best * (remaining_answers / num_answers))
-  + (current * (answers_examined / num_answers))
-
 let get_counts remaining_answers guess =
   let counts = Hashtbl.create (module String) in
   List.iter remaining_answers ~f:(fun answer ->
@@ -50,15 +35,15 @@ let expected_answers_remaining answers guess =
       Float.(acc + (count * count / num_results)))
 
 let get_guesses words answers n =
-  (* if there are <= 3 answers, we always want to choose one of those to be our guess *)
-  if List.length answers <= 2 then answers
-  else
-    let guesses =
-      List.map words ~f:(fun word ->
-          (word, expected_answers_remaining answers word))
-      |> List.sort ~compare:(fun (_, n1) (_, n2) -> Float.compare n1 n2)
-    in
-    List.map (List.take guesses n) ~f:fst
+  let top_n = Top_n.create n in
+  List.iter answers ~f:(fun word ->
+      Top_n.add top_n word (expected_answers_remaining answers word));
+  let score, _ = Top_n.get_min top_n in
+  if Float.(score > 1.00001) then
+    List.iter words ~f:(fun word ->
+        if Float.(fst (Top_n.get_min top_n) > 1.00001) then
+          Top_n.add top_n word (expected_answers_remaining answers word));
+  Top_n.to_list top_n
 
 let rec get_guess_aux ~guesses ~answers ~max_guesses ~exploration_rate =
   let eval_guess answers guess _best_so_far =
@@ -68,11 +53,6 @@ let rec get_guess_aux ~guesses ~answers ~max_guesses ~exploration_rate =
       Hashtbl.fold counts ~init:(Float.zero, Float.zero)
         ~f:(fun ~key:result ~data:count (total_guesses, answers_examined) ->
           let open Float in
-          (* let best_possible_ev =
-               get_best_possible_ev total_guesses answers_examined num_answers - 1.
-             in
-             if best_possible_ev >= best_so_far then (infinity, infinity)
-             else *)
           let new_answers = filter_answers answers guess result in
           let _, expected_num_guesses =
             get_guess_aux ~guesses ~answers:new_answers
