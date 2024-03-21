@@ -5,22 +5,17 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github leedsjohn/optimal-wordle-solver))
 
-(authors "Author Name")
+(authors "John Leeds")
 
-(maintainers "Maintainer Name")
+(maintainers "John Leeds")
 
-(license LICENSE)
-
-(documentation https://url/to/documentation)
+(documentation https://github.com/LeedsJohn/optimal-wordle-solver)
 
 (package
  (name wordle_solver)
- (synopsis "A short synopsis")
- (description "A longer description")
- (depends ocaml dune)
- (tags
-  (topics "to describe" your project)))
+ (synopsis "Project to solve Wordle puzzles optimizing for the lowest number of average guesses.")
+ (depends core core_unix dune ocaml ppx_jane))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
