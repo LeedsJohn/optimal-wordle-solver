@@ -4,4 +4,4 @@ open! Core
    g -> green
    y -> yellow
    x -> gray *)
-val evaluate : string -> string -> string
+val evaluate : Word.t -> Word.t -> string

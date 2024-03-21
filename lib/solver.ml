@@ -2,10 +2,11 @@ open! Core
 
 let filter_answers answers guess res =
   List.filter answers ~f:(fun answer ->
-      String.(guess <> answer && Evaluator.evaluate guess answer = res))
+      (not (Word.equal answer guess))
+      && String.(Evaluator.evaluate guess answer = res))
 
 module Guess_ev = struct
-  type t = string * float [@@deriving sexp]
+  type t = Word.t * float [@@deriving sexp]
 end
 
 let cache =
@@ -25,7 +26,7 @@ let expected_answers_remaining answers guess =
   let num_results = List.length answers |> Float.of_int in
   let possible_results = Hashtbl.create (module String) in
   List.iter answers ~f:(fun answer ->
-      if String.(guess = answer) then ()
+      if Word.equal guess answer then ()
       else
         let result = Evaluator.evaluate guess answer in
         Hashtbl.update possible_results result ~f:(fun n ->
@@ -65,12 +66,13 @@ let rec get_guess_aux ~guesses ~answers ~max_guesses ~exploration_rate =
     in
     Float.(total_guesses / of_int num_answers)
   in
-  if List.length answers = 0 then ("", 0.)
-  else if max_guesses = 0 then ("", Float.infinity)
+  if List.length answers = 0 then (Word.empty_word, 0.)
+  else if max_guesses = 0 then (Word.empty_word, Float.infinity)
   else
     let guesses = get_guesses guesses answers exploration_rate in
     let res =
-      List.fold guesses ~init:("", Float.infinity) ~f:(fun acc word ->
+      List.fold guesses ~init:(Word.empty_word, Float.infinity)
+        ~f:(fun acc word ->
           let _best_word, best_score = acc in
           let score = eval_guess answers word best_score in
           if Float.(score < best_score) then (word, score) else acc)
@@ -79,7 +81,7 @@ let rec get_guess_aux ~guesses ~answers ~max_guesses ~exploration_rate =
 
 let get_guess ~guesses ~answers ~max_guesses ~exploration_rate ~prev_results =
   match List.length prev_results with
-  | 0 -> ("salet", 0.)
+  | 0 -> (Word.of_string "salet", 0.)
   | 1 -> Hashtbl.find_exn cache (List.hd_exn prev_results |> snd)
   | _ ->
       let answers =
@@ -90,7 +92,7 @@ let get_guess ~guesses ~answers ~max_guesses ~exploration_rate ~prev_results =
 
 let rec play_game_aux ~answer ~guesses ~answers ~max_guesses ~exploration_rate
     ~path =
-  if List.length path > 0 && String.(fst (List.hd_exn path) = answer) then
+  if List.length path > 0 && Word.equal (fst (List.hd_exn path)) answer then
     List.rev path |> List.map ~f:fst
   else
     let guess, _expected_score =
@@ -104,6 +106,7 @@ let rec play_game_aux ~answer ~guesses ~answers ~max_guesses ~exploration_rate
       ~path:((guess, res) :: path)
 
 let play_game ~answer ~exploration_rate =
+  let answer = Word.of_string answer in
   let dictionary = Dictionary.create "guesses.txt" "answers.txt" () in
   let guesses, answers =
     (Dictionary.get_words dictionary, Dictionary.get_answers dictionary)
@@ -111,12 +114,13 @@ let play_game ~answer ~exploration_rate =
   play_game_aux ~answer ~guesses ~answers ~max_guesses:5 ~exploration_rate
     ~path:[]
 
-let get_total_guesses possible_answers exploration_rate =
+let get_total_guesses (possible_answers : Word.t list) exploration_rate =
   List.foldi possible_answers ~init:0 ~f:(fun _i acc answer ->
-      let path = play_game ~answer ~exploration_rate in
+      let path = play_game ~answer:answer.word ~exploration_rate in
       let acc = acc + List.length path in
-      printf "%s: " answer;
-      print_s [%sexp (path : string list)];
+      printf "%s: " answer.word;
+      let words = List.map path ~f:(fun word -> word.word) in
+      print_s [%sexp (words : string list)];
       Out_channel.flush Out_channel.stdout;
       acc)
 
@@ -131,8 +135,8 @@ let rec play_game_interactive_aux guesses answers max_guesses prev_results =
         get_guess ~guesses ~answers ~max_guesses ~exploration_rate:40
           ~prev_results
       in
-      printf "Recommended guess: %s (expected guesses: %f): " recommended_guess
-        ev;
+      printf "Recommended guess: %s (expected guesses: %f): "
+        recommended_guess.word ev;
       Out_channel.flush Out_channel.stdout;
       In_channel.input_line_exn In_channel.stdin
   in
@@ -142,7 +146,7 @@ let rec play_game_interactive_aux guesses answers max_guesses prev_results =
   if String.(result = "ggggg") then print_endline "good job!"
   else
     play_game_interactive_aux guesses answers (max_guesses - 1)
-      ((guess, result) :: prev_results)
+      ((Word.of_string guess, result) :: prev_results)
 
 let play_game_interactive () =
   printf "Enter your guess: ";
@@ -155,10 +159,10 @@ let play_game_interactive () =
   let guesses, answers =
     (Dictionary.get_words dictionary, Dictionary.get_answers dictionary)
   in
-  play_game_interactive_aux guesses answers 5 [ (guess, result) ]
+  play_game_interactive_aux guesses answers 5 [ (Word.of_string guess, result) ]
 
 let create_cache ~guesses ~answers ~exploration_rate =
-  let guess = "salet" in
+  let guess = Word.of_string "salet" in
   List.iteri answers ~f:(fun i answer ->
       printf "%d\n" i;
       Out_channel.flush Out_channel.stdout;
@@ -167,7 +171,7 @@ let create_cache ~guesses ~answers ~exploration_rate =
           match res with
           | Some res -> res
           | None ->
-              let answers = filter_answers answers "salet" result in
+              let answers = filter_answers answers guess result in
               get_guess_aux ~guesses ~answers ~max_guesses:5 ~exploration_rate));
   let s = Hashtbl.sexp_of_t String.sexp_of_t Guess_ev.sexp_of_t cache in
   Sexp.save_hum "cache.sexp" s

@@ -8,6 +8,6 @@ open! Core
 type t
 
 val create : n:int -> t
-val add : t -> word:string -> score:float -> unit
-val get_min : t -> float * string
-val to_list : t -> string list
+val add : t -> word:Word.t -> score:float -> unit
+val get_min : t -> float * Word.t
+val to_list : t -> Word.t list

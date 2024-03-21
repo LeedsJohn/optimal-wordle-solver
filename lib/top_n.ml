@@ -1,33 +1,33 @@
 open! Core
 
 type t = {
-  ar : (float * string) Array.t;
-  used_words : string Hash_set.t;
+  ar : (float * Word.t) Array.t;
+  used_words : Word.t Hash_set.t;
   mutable min_score : float;
-  mutable min_word : string;
+  mutable min_word : Word.t;
   mutable max_pos : int;
   mutable max_score : float;
-  mutable max_word : string;
+  mutable max_word : Word.t;
 }
 
-let empty_entry = (Float.infinity, "")
+let empty_entry = (Float.infinity, Word.empty_word)
 
 let create ~n =
   {
     ar = Array.create ~len:n empty_entry;
-    used_words = Hash_set.create (module String);
+    used_words = Hash_set.create (module Word);
     min_score = Float.infinity;
-    min_word = "";
+    min_word = Word.empty_word;
     max_pos = 0;
     max_score = Float.infinity;
-    max_word = "";
+    max_word = Word.empty_word;
   }
 
 let update_pos t =
   t.min_score <- Float.infinity;
-  t.min_word <- "";
+  t.min_word <- Word.empty_word;
   t.max_score <- Float.neg_infinity;
-  t.max_word <- "";
+  t.max_word <- Word.empty_word;
   t.max_pos <- -1;
   Array.iteri t.ar ~f:(fun i (score, word) ->
       if Float.(score < t.min_score) then (
@@ -50,4 +50,4 @@ let get_min t = (t.min_score, t.min_word)
 
 let to_list t =
   Array.fold t.ar ~init:[] ~f:(fun acc (_, word) ->
-      if String.(word = "") then acc else word :: acc)
+      if Word.equal word Word.empty_word then acc else word :: acc)

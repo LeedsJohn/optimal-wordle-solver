@@ -11,7 +11,7 @@ val create :
   unit ->
   t
 
-val get_words : t -> string list
-val get_answers : t -> string list
-val filter_dictionary : t -> Information.t -> t
-val num_answers_remaining : t -> string -> string -> int
+val get_words : t -> Word.t list
+val get_answers : t -> Word.t list
+(* val filter_dictionary : t -> Information.t -> t
+   val num_answers_remaining : t -> string -> string -> int *)
