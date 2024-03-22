@@ -2,12 +2,10 @@ open! Core
 
 type t = {
   ar : (float * Word.t) Array.t;
-  used_words : Word.t Hash_set.t;
   mutable min_score : float;
   mutable min_word : Word.t;
   mutable max_pos : int;
   mutable max_score : float;
-  mutable max_word : Word.t;
 }
 
 let empty_entry = (Float.infinity, Word.empty_word)
@@ -15,19 +13,16 @@ let empty_entry = (Float.infinity, Word.empty_word)
 let create ~n =
   {
     ar = Array.create ~len:n empty_entry;
-    used_words = Hash_set.create (module Word);
     min_score = Float.infinity;
     min_word = Word.empty_word;
     max_pos = 0;
     max_score = Float.infinity;
-    max_word = Word.empty_word;
   }
 
 let update_pos t =
   t.min_score <- Float.infinity;
   t.min_word <- Word.empty_word;
   t.max_score <- Float.neg_infinity;
-  t.max_word <- Word.empty_word;
   t.max_pos <- -1;
   Array.iteri t.ar ~f:(fun i (score, word) ->
       if Float.(score < t.min_score) then (
@@ -35,14 +30,11 @@ let update_pos t =
         t.min_word <- word);
       if Float.(score > t.max_score) then (
         t.max_pos <- i;
-        t.max_score <- score;
-        t.max_word <- word))
+        t.max_score <- score))
 
 let add t ~word ~score =
-  if Float.(score >= t.max_score) || Hash_set.mem t.used_words word then ()
+  if Float.(score >= t.max_score) then ()
   else (
-    Hash_set.remove t.used_words t.max_word;
-    Hash_set.add t.used_words word;
     t.ar.(t.max_pos) <- (score, word);
     update_pos t)
 

@@ -1,23 +1,44 @@
 open! Core
 
-type t = { word : string; id : int; possible_answer : bool } [@@deriving sexp]
+(* Each word is represented as a base 26 integer *)
 
-let compare t1 t2 = Int.compare t1.id t2.id
-let equal t1 t2 = Int.equal t1.id t2.id
-let hash t = t.id
-let hash_fold_t state t = Int.hash_fold_t state t.id
-let words = Hashtbl.create (module String)
-let count = ref 0
+type t = int [@@deriving sexp]
+
+let compare t1 t2 = Int.compare (Int.abs t1) (Int.abs t2)
+let equal t1 t2 = Int.equal (Int.abs t1) (Int.abs t2)
+let hash t = Int.abs t
+let hash_fold_t state t = Int.hash_fold_t state (Int.abs t)
+
+let of_string s =
+  String.foldi s ~init:0 ~f:(fun i acc c ->
+      let base = Int.pow 26 i in
+      let n = Char.to_int c - Char.to_int 'a' in
+      acc + (base * n))
 
 let create word ~possible_answer =
-  Hashtbl.update_and_return words word ~f:(fun w ->
-      match w with
-      | Some w -> w
-      | None ->
-          let w = { word; id = !count; possible_answer } in
-          count := !count + 1;
-          w)
+  let num = of_string word in
+  if possible_answer then num else 0 - num
 
 let empty_word = create "" ~possible_answer:false
-let of_string word = Hashtbl.find_exn words word
-let max_id = 15000
+
+let to_string t =
+  let rec aux num i path =
+    if List.length path = 5 then List.rev path |> String.of_list
+    else
+      let n = num % 26 in
+      aux (num / 26) (i + 1) (Char.of_int_exn (n + Char.to_int 'a') :: path)
+  in
+  aux (Int.abs t) 1 []
+
+let possible_answer t = t >= 0
+
+let%expect_test "encoding words" =
+  print_endline (of_string "hello" |> to_string);
+  [%expect {| hello |}];
+  print_endline (of_string "aaaaa" |> to_string);
+  [%expect {| aaaaa |}];
+  print_endline (of_string "zzzzz" |> to_string);
+  [%expect {| zzzzz |}];
+  print_endline (of_string "zazaz" |> to_string);
+  [%expect {| zazaz |}];
+  ()

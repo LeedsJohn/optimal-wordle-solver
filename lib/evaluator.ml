@@ -1,9 +1,12 @@
 open! Core
 
 module Word_pair = struct
-  type t = Word.t * Word.t [@@deriving compare, sexp_of]
+  type t = Word.t * Word.t [@@deriving sexp_of]
 
-  let hash ((w1, w2) : t) = w1.id + (w2.id * (Word.max_id + 1))
+  let compare ((w1, w2) : t) ((w3, w4) : t) =
+    if Word.compare w1 w3 <> 0 then Word.compare w1 w3 else Word.compare w2 w4
+
+  let hash (w1, w2) = Word.hash w1 * Word.hash w2 |> Int.abs
 end
 
 let cache = Hashtbl.create (module Word_pair)
@@ -28,7 +31,7 @@ let evaluate guess answer =
   match Hashtbl.find cache (guess, answer) with
   | Some res -> res
   | None ->
-      let res = evaluate_aux guess.word answer.word in
+      let res = evaluate_aux (Word.to_string guess) (Word.to_string answer) in
       Hashtbl.add_exn cache ~key:(guess, answer) ~data:res;
       res
 

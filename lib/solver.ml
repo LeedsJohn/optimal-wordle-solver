@@ -42,7 +42,9 @@ let get_guesses words answers n =
   let score, _ = Top_n.get_min top_n in
   if Float.(score > 1.00001) then
     List.iter words ~f:(fun word ->
-        if Float.(fst (Top_n.get_min top_n) > 1.00001) then
+        (* already checked answers *)
+        if Word.possible_answer word then ()
+        else if Float.(fst (Top_n.get_min top_n) > 1.00001) then
           Top_n.add top_n ~word ~score:(expected_answers_remaining answers word));
   Top_n.to_list top_n
 
@@ -53,16 +55,16 @@ let rec get_guess_aux ~guesses ~answers ~max_guesses ~exploration_rate =
     let total_guesses, _ =
       Hashtbl.fold counts ~init:(Float.zero, Float.zero)
         ~f:(fun ~key:result ~data:count (total_guesses, answers_examined) ->
-          let open Float in
           let new_answers = filter_answers answers guess result in
           let _, expected_num_guesses =
             get_guess_aux ~guesses ~answers:new_answers
               ~max_guesses:Int.(max_guesses - 1)
               ~exploration_rate
           in
-          let c = of_int count in
-          ( total_guesses + ((1. + expected_num_guesses) * c),
-            answers_examined + c ))
+          let c = Float.of_int count in
+          Float.
+            ( total_guesses + ((1. + expected_num_guesses) * c),
+              answers_examined + c ))
     in
     Float.(total_guesses / of_int num_answers)
   in
@@ -116,10 +118,10 @@ let play_game ~answer ~exploration_rate =
 
 let get_total_guesses (possible_answers : Word.t list) exploration_rate =
   List.foldi possible_answers ~init:0 ~f:(fun _i acc answer ->
-      let path = play_game ~answer:answer.word ~exploration_rate in
+      let path = play_game ~answer:(Word.to_string answer) ~exploration_rate in
       let acc = acc + List.length path in
-      printf "%s: " answer.word;
-      let words = List.map path ~f:(fun word -> word.word) in
+      printf "%s: " (Word.to_string answer);
+      let words = List.map path ~f:Word.to_string in
       print_s [%sexp (words : string list)];
       Out_channel.flush Out_channel.stdout;
       acc)
@@ -136,7 +138,8 @@ let rec play_game_interactive_aux guesses answers max_guesses prev_results =
           ~prev_results
       in
       printf "Recommended guess: %s (expected guesses: %f): "
-        recommended_guess.word ev;
+        (Word.to_string recommended_guess)
+        ev;
       Out_channel.flush Out_channel.stdout;
       In_channel.input_line_exn In_channel.stdin
   in

@@ -84,7 +84,8 @@ let get_guess_command =
          Solver.get_guess ~guesses ~answers ~max_guesses ~exploration_rate
            ~prev_results:[]
        in
-       printf "Best guess: %S (Expected guesses: %f)\n" best_guess.word
+       printf "Best guess: %S (Expected guesses: %f)\n"
+         (Word.to_string best_guess)
          expected_guesses)
 
 let command =
