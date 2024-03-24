@@ -5,7 +5,7 @@ val get_guess :
   answers:Word.t list ->
   max_guesses:int ->
   exploration_rate:int ->
-  prev_results:(Word.t * string) list ->
+  prev_results:(Word.t * Evaluation.t) list ->
   Word.t * float
 
 val play_game : answer:string -> exploration_rate:int -> Word.t list

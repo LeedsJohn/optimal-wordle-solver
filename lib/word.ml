@@ -21,14 +21,14 @@ let create word ~possible_answer =
 
 let empty_word = create "" ~possible_answer:false
 
-let to_string t =
-  let rec aux num i path =
-    if List.length path = 5 then List.rev path |> String.of_list
-    else
-      let n = num % 26 in
-      aux (num / 26) (i + 1) (Char.of_int_exn (n + Char.to_int 'a') :: path)
-  in
-  aux (Int.abs t) 1 []
+let get_char t i =
+  let n = Int.abs t / Int.pow 26 i % 26 in
+  Char.of_int_exn (n + Char.to_int 'a')
+
+let to_string t = List.map (List.range 0 5) ~f:(get_char t) |> String.of_list
+
+let count_occurrences t c =
+  List.count (List.range 0 5) ~f:(fun i -> Char.(get_char t i = c))
 
 let possible_answer t = t >= 0
 

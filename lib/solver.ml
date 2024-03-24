@@ -3,7 +3,7 @@ open! Core
 let filter_answers answers guess res =
   List.filter answers ~f:(fun answer ->
       (not (Word.equal answer guess))
-      && String.(Evaluator.evaluate guess answer = res))
+      && Evaluation.(equal (evaluate guess answer) res))
 
 module Guess_ev = struct
   type t = Word.t * float [@@deriving sexp]
@@ -12,23 +12,23 @@ end
 let cache =
   if Sys_unix.file_exists_exn "cache.sexp" then
     Sexp.load_sexp "cache.sexp"
-    |> Hashtbl.m__t_of_sexp (module String) Guess_ev.t_of_sexp
-  else Hashtbl.create (module String)
+    |> Hashtbl.m__t_of_sexp (module Evaluation) Guess_ev.t_of_sexp
+  else Hashtbl.create (module Evaluation)
 
 let get_counts remaining_answers guess =
-  let counts = Hashtbl.create (module String) in
+  let counts = Hashtbl.create (module Evaluation) in
   List.iter remaining_answers ~f:(fun answer ->
-      Hashtbl.update counts (Evaluator.evaluate guess answer) ~f:(fun n ->
+      Hashtbl.update counts (Evaluation.evaluate guess answer) ~f:(fun n ->
           match n with None -> 1 | Some n -> n + 1));
   counts
 
 let expected_answers_remaining answers guess =
   let num_results = List.length answers |> Float.of_int in
-  let possible_results = Hashtbl.create (module String) in
+  let possible_results = Hashtbl.create (module Evaluation) in
   List.iter answers ~f:(fun answer ->
       if Word.equal guess answer then ()
       else
-        let result = Evaluator.evaluate guess answer in
+        let result = Evaluation.evaluate guess answer in
         Hashtbl.update possible_results result ~f:(fun n ->
             match n with None -> 1 | Some n -> n + 1));
   Hashtbl.fold possible_results ~init:0. ~f:(fun ~key:_ ~data:count acc ->
@@ -102,7 +102,7 @@ let rec play_game_aux ~answer ~guesses ~answers ~max_guesses ~exploration_rate
         ~prev_results:path
     in
     let max_guesses = max_guesses - 1 in
-    let res = Evaluator.evaluate guess answer in
+    let res = Evaluation.evaluate guess answer in
     let answers = filter_answers answers guess res in
     play_game_aux ~answer ~guesses ~answers ~max_guesses ~exploration_rate
       ~path:((guess, res) :: path)
@@ -149,7 +149,7 @@ let rec play_game_interactive_aux guesses answers max_guesses prev_results =
   if String.(result = "ggggg") then print_endline "good job!"
   else
     play_game_interactive_aux guesses answers (max_guesses - 1)
-      ((Word.of_string guess, result) :: prev_results)
+      ((Word.of_string guess, Evaluation.of_string result) :: prev_results)
 
 let play_game_interactive () =
   printf "Enter your guess: ";
@@ -162,19 +162,20 @@ let play_game_interactive () =
   let guesses, answers =
     (Dictionary.get_words dictionary, Dictionary.get_answers dictionary)
   in
-  play_game_interactive_aux guesses answers 5 [ (Word.of_string guess, result) ]
+  play_game_interactive_aux guesses answers 5
+    [ (Word.of_string guess, Evaluation.of_string result) ]
 
 let create_cache ~guesses ~answers ~exploration_rate =
   let guess = Word.of_string "salet" in
   List.iteri answers ~f:(fun i answer ->
       printf "%d\n" i;
       Out_channel.flush Out_channel.stdout;
-      let result = Evaluator.evaluate guess answer in
+      let result = Evaluation.evaluate guess answer in
       Hashtbl.update cache result ~f:(fun res ->
           match res with
           | Some res -> res
           | None ->
               let answers = filter_answers answers guess result in
               get_guess_aux ~guesses ~answers ~max_guesses:5 ~exploration_rate));
-  let s = Hashtbl.sexp_of_t String.sexp_of_t Guess_ev.sexp_of_t cache in
+  let s = Hashtbl.sexp_of_t Evaluation.sexp_of_t Guess_ev.sexp_of_t cache in
   Sexp.save_hum "cache.sexp" s
