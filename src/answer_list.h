@@ -19,6 +19,8 @@ class Answer_list {
          */
         Answer_list(bool all = false);
 
+        // The index of w MUST be greater than the previous greatest word index in
+        // the answer list.
         void append(const Word w);
 
         /** Create a new filtered Answer_list based off of the results of a guess and 
@@ -29,26 +31,35 @@ class Answer_list {
          */
         Answer_list filter(const Word guess, const result res) const;
 
+        // Return an arbitrary word from the Answer List.
+        Word get() const { return this->answers[0]; }
+
+        // Lazily initializes hash if necessary.
         size_t get_hash() const;
 
-        int length;
+        size_t size() const { return this->size_; };
+
         std::vector<unsigned short> answers;
 
         bool operator==(const Answer_list& other) const {
-            if (this->hash != other.hash || this->answers.size() != other.answers.size()) {
+            if (this->get_hash() != other.get_hash() || this->answers.size() != other.answers.size()) {
                 return false;
             }
-            for (size_t i = 0; i < this->answers.size(); ++i) {
-                if (this->answers[i] != other.answers[i]) {
-                    return false;
-                }
-            }
-            return true;
+            return std::equal(this->answers.begin(), this->answers.end(), other.answers.begin());
         }
 
-        // TOOD: REMOVE
+        friend std::ostream& operator<<(std::ostream & os, const Answer_list& answers) {
+            if (answers.size() > 10) {
+                os << "Answer list with length " << answers.size() << "\n";
+            } else {
+                for (Word w : answers) {
+                    os << w << "\n";
+                }
+            }
+            return os;
+        }
+
         bool contains(const Word w) const;
-        void print() const;
 
         class Iterator {
             public:
@@ -86,6 +97,7 @@ class Answer_list {
     private:
         mutable size_t hash;
         mutable bool hash_computed;
+        size_t size_;
 };
 
 #endif

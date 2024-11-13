@@ -8,27 +8,30 @@
 
 #include <iostream>
 
-
-// TODO: represent this as an array where the even indices say how many valid words are
-// still alive in a row and the odd indices say how many eliminated words.
-// So for example 0, 1, 7, 8, 9, 10 would be [2, 5, 4]
-// TODO: I think this will basically just go with stack depth so I can assign this->idx
-// to the number of currently created lists instead of looping through all the possibilities
-// TODO: make a real iterator instead of this scuffed thing
+/**
+ * This class stores the possible answers as ranges of numbers. This is to save memory
+ * so that we don't need to save 2,000+ entries for an answer list. While untested,
+ * I also think that there will tend to be chunks of words that remain alive in any
+ * answer list because WORDS_FILE is alphabetized.
+ * 
+ * If we create an answer list with the numbers 1, 5, 6, 7, 10, 11, 12, 13, 14, this
+ * would be stored as [1, 1, 5, 7, 10, 14] - we have the numbers 1 through 1, 5 through
+ * 7, and 10 through 14.
+ */
 Answer_list::Answer_list(bool all) {
     this->hash_computed = false;
     if (all) {
-        this->length = NUM_ANSWERS;
+        this->size_ = NUM_ANSWERS;
         this->answers.push_back(0);
         this->answers.push_back(NUM_ANSWERS - 1);
         return;
     }
-    this->length = 0;
+    this->size_ = 0;
 }
 
 void Answer_list::append(const Word w) {
     this->hash_computed = false;
-    this->length++;
+    this->size_++;
     unsigned short i = w.get_index();
     if (this->answers.size() == 0 || this->answers.back() + 1 != i) {
         this->answers.push_back(i);
@@ -63,18 +66,9 @@ size_t Answer_list::get_hash() const {
     return this->hash;
 }
 
-// TODO: Remove
 bool Answer_list::contains(const Word w) const {
     for (Word word : *this) {
         if (word == w) return true;
     }
     return false;
 }
-
-// TODO: Remove
-void Answer_list::print() const {
-    for (Word word : *this) {
-        std::cout << word << "\n";
-    }
-}
-

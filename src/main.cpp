@@ -13,9 +13,9 @@ int play(const Word answer, bool verbose) {
     Answer_list stuff = answers.filter(guess, evaluator.evaluate(guess, answer));
     int i = 2;
     for (int j = 0; j < 6; ++j) {
-        if (verbose) std::cout << "\n\nAnswers remaining: " << stuff.length << "\n";
-        if (verbose && stuff.length <= 10) {
-            stuff.print();
+        if (verbose) std::cout << "\n\nAnswers remaining: " << stuff.size() << "\n";
+        if (verbose && stuff.size() <= 10) {
+            std::cout << stuff << "\n";
         }
         std::tuple<Word, int> res = get_guess(stuff, 5 - j);
         Word w = std::get<0>(res);
