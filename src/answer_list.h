@@ -29,11 +29,9 @@ class Answer_list {
          */
         Answer_list filter(const Word guess, const result res) const;
 
-        void make_hash();
+        size_t get_hash() const;
 
         int length;
-        size_t hash;
-        // std::array<unsigned short, MAX_LENGTH> answers;
         std::vector<unsigned short> answers;
 
         bool operator==(const Answer_list& other) const {
@@ -46,16 +44,6 @@ class Answer_list {
                 }
             }
             return true;
-
-            // if (this->idx != other.idx) {
-            //     return false;
-            // }
-            // for (int i = 0; i <= this->idx; ++i) {
-            //     if (this->answers[i] != other.answers[i]) {
-            //         return false;
-            //     }
-            // }
-            // return true;
         }
 
         // TOOD: REMOVE
@@ -96,6 +84,8 @@ class Answer_list {
         Iterator end() const { return Iterator(*this, this->idx + 2, Word(~0)); }
 
     private:
+        mutable size_t hash;
+        mutable bool hash_computed;
         int idx;
 };
 

@@ -16,15 +16,12 @@
 // to the number of currently created lists instead of looping through all the possibilities
 // TODO: make a real iterator instead of this scuffed thing
 Answer_list::Answer_list(bool all) {
-    this->hash = 0;
+    this->hash_computed = false;
     if (all) {
         this->length = NUM_ANSWERS;
-        // this->answers[0] = 0;
-        // this->answers[1] = NUM_ANSWERS - 1;
         this->idx = 1;
         this->answers.push_back(0);
         this->answers.push_back(NUM_ANSWERS - 1);
-        this->make_hash();
         return;
     }
     this->idx = -1;
@@ -32,13 +29,12 @@ Answer_list::Answer_list(bool all) {
 }
 
 void Answer_list::append(const Word w) {
+    this->computed_hash = false;
     this->length++;
     unsigned short i = w.get_index();
     if (this->idx == -1 || this->answers[this->idx] + 1 != i) {
         this->answers.push_back(i);
         this->answers.push_back(i);
-        // this->answers[this->idx + 1] = i;
-        // this->answers[this->idx + 2] = i;
         this->idx += 2;
         return;
     }
@@ -53,17 +49,21 @@ Answer_list Answer_list::filter(const Word guess, const result res) const {
             new_list.append(answer);
         }
     }
-    new_list.make_hash();
     return new_list;
 }
 
-void Answer_list::make_hash() {
+size_t Answer_list::get_hash() const {
+    if (this->hash_computed) {
+        return this->hash;
+    }
     std::hash<unsigned short> hasher;
     size_t combined_hash = 0;
     for (int i = 0; i <= this->idx; ++i) {
         combined_hash ^= hasher(this->answers[i]) + 0x9e3779b9 + (combined_hash << 6) + (combined_hash >> 2);
     }
     this->hash = combined_hash;
+    this->hash_computed = true;
+    return this->hash;
 }
 
 // TODO: Remove

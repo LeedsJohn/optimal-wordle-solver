@@ -17,7 +17,7 @@
 template<>
 struct std::hash<Answer_list> {
     size_t operator()(const Answer_list& l) const {
-        return l.hash;
+        return l.get_hash();
     }
 };
 
