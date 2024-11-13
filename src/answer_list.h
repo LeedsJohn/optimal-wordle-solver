@@ -59,7 +59,7 @@ class Answer_list {
                 Iterator& operator++() {
                     if (this->val.get_index() == this->answers.answers[this->ptr]) {
                         this->ptr += 2;
-                        if (this->ptr > this->answers.idx) {
+                        if (this->ptr >= this->answers.answers.size()) {
                             this->val = Word(~0);
                         } else {
                             this->val = Word(this->answers.answers[this->ptr - 1]);
@@ -75,18 +75,17 @@ class Answer_list {
 
 
             private:
-                int ptr;
+                size_t ptr;
                 Word val;
                 const Answer_list& answers;
         };
 
         Iterator begin() const { return Iterator(*this, 1, Word(this->answers[0])); }
-        Iterator end() const { return Iterator(*this, this->idx + 2, Word(~0)); }
+        Iterator end() const { return Iterator(*this, this->answers.size() + 1, Word(~0)); }
 
     private:
         mutable size_t hash;
         mutable bool hash_computed;
-        int idx;
 };
 
 #endif
