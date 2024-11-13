@@ -3,13 +3,14 @@
 #include "constants.h"
 #include "evaluator.h"
 #include "solver.h"
+#include <algorithm>
 #include <array>
+#include <limits>
 #include <tuple>
 #include <unordered_map>
 
 #include <iostream>
 
-#define MAX_TOTAL_GUESSES std::numeric_limits<double>::infinity()
 #define EXPLORATION_RATE 80
 
 
@@ -74,9 +75,8 @@ void get_guesses(std::array<std::tuple<Word, int>, EXPLORATION_RATE>& guesses_to
     }
 }
 
-// std::unordered_map<Answer_list, std::tuple<Word, double>> cache;
 std::unordered_map<Answer_list, std::tuple<Word, double>, std::hash<Answer_list>, std::equal_to<Answer_list>> cache;
-std::tuple<Word, double> get_guess_aux(const Answer_list& answers, int max_guesses, double best_guess_count) {
+std::tuple<Word, double> get_guess_aux(const Answer_list& answers, int max_guesses, double best_average_guesses) {
     if (max_guesses == 0) {
         return {bad_word, std::numeric_limits<double>::infinity()};
     } else if (answers.length == 1) {
@@ -114,18 +114,18 @@ std::tuple<Word, double> get_guess_aux(const Answer_list& answers, int max_guess
                 continue;
             }
             const result res = evaluator.evaluate(guess, answer);
-            std::tuple<Word, double> best = get_guess_aux(answers.filter(guess, res), max_guesses - 1, MAX_TOTAL_GUESSES);
+            std::tuple<Word, double> best = get_guess_aux(answers.filter(guess, res), max_guesses - 1, std::numeric_limits<double>::infinity());
             // total += dl * (1.0 + std::get<1>(best));
             total += dl * std::get<1>(best);
         }
         // double ev = total / ((double) answers.length);
         double ev = total;
-        if (ev < best_guess_count) {
-            best_guess_count = ev;
+        if (ev < best_average_guesses) {
+            best_average_guesses = ev;
             best_word = guess;
         }
     }
-    std::tuple<Word, double> res = {best_word, best_guess_count};
+    std::tuple<Word, double> res = {best_word, best_average_guesses};
     if (!(best_word == bad_word) && answers.length == 2 && !(answers.contains(best_word))) {
         std::cout << "Suspicious: " << best_word << " Answers:\n";
         answers.print();
@@ -135,5 +135,5 @@ std::tuple<Word, double> get_guess_aux(const Answer_list& answers, int max_guess
 }
 
 std::tuple<Word, double> get_guess(const Answer_list& answers, int max_guesses) {
-    return get_guess_aux(answers, max_guesses, MAX_TOTAL_GUESSES);
+    return get_guess_aux(answers, max_guesses, std::numeric_limits<double>::infinity());
 }

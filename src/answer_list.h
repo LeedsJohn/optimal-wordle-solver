@@ -7,8 +7,6 @@
 #include <array>
 #include <vector>
 
-// #define MAX_LENGTH 320
-
 // Holds all words that are still possible answers.
 class Answer_list {
     public:
@@ -67,7 +65,7 @@ class Answer_list {
         class Iterator {
             public:
 
-                Iterator(const Answer_list& answers, int ptr, Word val) : ptr(ptr), val(val), answers(answers) {};
+                Iterator(const Answer_list& a, int p, Word v) : ptr(p), val(v), answers(a) {};
 
                 const Word& operator*() const { return this->val; }
                 Iterator& operator++() {
