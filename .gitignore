@@ -1,0 +1,6 @@
+.DS_STORE
+build/
+debug/
+debug.plist
+evaluations.txt
+make_debug.sh
