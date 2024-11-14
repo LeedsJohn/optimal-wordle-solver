@@ -48,11 +48,11 @@ class Answer_list {
             return std::equal(this->answers.begin(), this->answers.end(), other.answers.begin());
         }
 
-        friend std::ostream& operator<<(std::ostream & os, const Answer_list& answers) {
-            if (answers.size() > 10) {
-                os << "Answer list with length " << answers.size() << "\n";
+        friend std::ostream& operator<<(std::ostream & os, const Answer_list& al) {
+            if (al.size() > 10) {
+                os << "Answer list with length " << al.size() << "\n";
             } else {
-                for (Word w : answers) {
+                for (Word w : al) {
                     os << w << "\n";
                 }
             }
