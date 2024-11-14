@@ -25,12 +25,6 @@ Word bad_word(~((unsigned short) 0));
 
 std::array<int, 243> results;
 
-void show_guesses(std::array<std::tuple<Word, size_t>, EXPLORATION_RATE>& guesses_to_try) {
-    for (int i = 0; i < EXPLORATION_RATE; ++i) {
-        std::cout << i << ". " << std::get<0>(guesses_to_try[i]) << " - " << std::get<1>(guesses_to_try[i]) << "\n";
-    }
-}
-
 int total_words_eliminated(const Answer_list& answers, Word guess, int beta) {
     results.fill(0);
     int N = answers.size();
@@ -57,22 +51,36 @@ struct compare {
     }
 };
 
-void get_guesses(std::array<std::tuple<Word, size_t>, EXPLORATION_RATE>& guesses_to_try, const Answer_list& answers) {
-    guesses_to_try.fill({bad_word, 0});
-    for (unsigned short i = 0; i < NUM_WORDS; ++i) {
-        Word w(i);
-
-        size_t words_eliminated = total_words_eliminated(answers, w, std::get<1>(guesses_to_try[EXPLORATION_RATE - 1]));
-        if (words_eliminated <= std::get<1>(guesses_to_try[EXPLORATION_RATE - 1])) {
-            continue;
-        }
-        guesses_to_try[EXPLORATION_RATE - 1] = {w, words_eliminated};
-        // TODO: (optimization) switch to using a priority queue
-        std::sort(guesses_to_try.begin(), guesses_to_try.end(), compare());
-        if (std::get<1>(guesses_to_try[0]) == (answers.size() - 1) * (answers.size() - 1) + answers.size()) {
-            break;
+size_t get_min_index(const std::array<std::tuple<Word, size_t>, EXPLORATION_RATE>& guesses_to_try) {
+    size_t res = 0;
+    for (size_t i = 1; i < EXPLORATION_RATE; ++i) {
+        if (std::get<1>(guesses_to_try[i]) < std::get<1>(guesses_to_try[res])) {
+            res = i;
+            if (std::get<1>(guesses_to_try[res]) == 0) {
+                break;
+            }
         }
     }
+    return res;
+}
+
+void get_guesses(std::array<std::tuple<Word, size_t>, EXPLORATION_RATE>& guesses_to_try, const Answer_list& answers) {
+    guesses_to_try.fill({bad_word, 0});
+    size_t min_i = 0;
+    for (unsigned short i = 0; i < NUM_WORDS; ++i) {
+        Word w(i);
+        size_t words_eliminated = total_words_eliminated(answers, w, std::get<1>(guesses_to_try[min_i]));
+        if (words_eliminated <= std::get<1>(guesses_to_try[min_i])) {
+            continue;
+        }
+        guesses_to_try[min_i] = {w, words_eliminated};
+        // TODO: (optimization) switch to using a priority queue
+        if (words_eliminated == (answers.size() - 1) * (answers.size() - 1) + answers.size()) {
+            break;
+        }
+        min_i = get_min_index(guesses_to_try);
+    }
+    std::sort(guesses_to_try.begin(), guesses_to_try.end(), compare());
 }
 
 std::unordered_map<Answer_list, std::tuple<Word, double>, std::hash<Answer_list>, std::equal_to<Answer_list>> cache;
