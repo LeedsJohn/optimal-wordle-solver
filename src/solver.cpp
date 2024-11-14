@@ -67,17 +67,21 @@ size_t get_min_index(const std::array<std::tuple<Word, size_t>, EXPLORATION_RATE
 void get_guesses(std::array<std::tuple<Word, size_t>, EXPLORATION_RATE>& guesses_to_try, const Answer_list& answers) {
     guesses_to_try.fill({bad_word, 0});
     size_t min_i = 0;
+    size_t max_eliminated = 0;
     for (unsigned short i = 0; i < NUM_WORDS; ++i) {
         Word w(i);
         size_t words_eliminated = total_words_eliminated(answers, w, std::get<1>(guesses_to_try[min_i]));
+        max_eliminated = words_eliminated > max_eliminated ? words_eliminated : max_eliminated;
         if (words_eliminated <= std::get<1>(guesses_to_try[min_i])) {
             continue;
         }
         guesses_to_try[min_i] = {w, words_eliminated};
-        // TODO: (optimization) switch to using a priority queue
-        if (words_eliminated == (answers.size() - 1) * (answers.size() - 1) + answers.size()) {
-            break;
+        size_t max_possible_eliminations = (answers.size() - 1) * (answers.size() - 1) + answers.size();
+        if ((i < NUM_ANSWERS && max_eliminated == max_possible_eliminations) ||
+            (i >= NUM_ANSWERS && max_eliminated >= max_possible_eliminations - 1)) {
+                break;
         }
+        // TODO: (optimization) switch to using a priority queue
         min_i = get_min_index(guesses_to_try);
     }
     std::sort(guesses_to_try.begin(), guesses_to_try.end(), compare());
