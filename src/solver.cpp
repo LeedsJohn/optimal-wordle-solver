@@ -114,10 +114,14 @@ std::tuple<Word, double> get_guess_aux(const Answer_list& answers, int max_guess
         }
         Word guess(std::get<0>(guesses_to_try[i]));
         double total = 1.0;
+        int j = 0;
         for (Word answer : answers) {
-            // TODO: Early exit here
+            ++j;
+            if ((double) (total + (double) (answers.size() - j) * dl) > best_average_guesses) {
+                total = std::numeric_limits<double>::infinity();
+                break;
+            }
             if (guess == answer) {
-                // total += dl;
                 continue;
             }
             const result res = evaluator.evaluate(guess, answer);
